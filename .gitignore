@@ -1,0 +1,8 @@
+.snakemake/
+logs/
+output/
+*.fa
+*.fastq
+*.pyc
+*.err
+*.out
