@@ -1,0 +1,58 @@
+import pandas as pd
+
+samples = pd.read_csv("../resources/samples.tsv", sep="\t")
+
+
+rule all:
+    input:
+        "output/plots/ZMW.vs.read.len.png",
+
+
+rule convert_to_sam:
+    conda:
+        "envs/samtools.yml"
+    input:
+        lambda wildcards: samples.loc[samples.Sample == wildcards.Sample].path,
+    output:
+        "output/sam/{Sample}.sam",
+    shell:
+        """
+    samtools view {input} > {output}
+    """
+
+
+rule extract_plotting_info:
+    conda:
+        "envs/py.yml"
+    input:
+        path="output/sam/{Sample}.sam",
+    output:
+        out="output/parsedSam/{Sample}.parsed.tsv",
+    params:
+        sample=lambda wildcards: wildcards.Sample,
+    script:
+        "scripts/pull_sam_info.py"
+
+
+rule merge_sample_info:
+    conda:
+        "envs/py.yml"
+    input:
+        frames=expand(
+            "output/parsedSam/{Sample}.parsed.tsv", Sample=list(samples.Sample)
+        ),
+    output:
+        out="output/parsedSam/merged.samples.tsv",
+    script:
+        "scripts/concat_dfs.py"
+
+
+rule plot:
+    conda:
+        "envs/R.yml"
+    input:
+        path="output/parsedSam/merged.samples.tsv",
+    output:
+        out="output/plots/ZMW.vs.read.len.png",
+    script:
+        "scripts/plot_zmw_vs_read_len.R"
